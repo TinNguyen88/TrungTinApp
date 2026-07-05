@@ -1,186 +1,303 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
-import React, { useState } from 'react';
-import { Navbar } from './components/Navbar';
-import { ArchitectureSpecView } from './components/ArchitectureSpecView';
-import { ThreatModelView } from './components/ThreatModelView';
-import { TriggerSimulatorView } from './components/TriggerSimulatorView';
-import { ModuleRoadmapView } from './components/ModuleRoadmapView';
-import { Module1DeliveryView } from './components/Module1DeliveryView';
-import { TabType } from './types';
-import { CheckCircle2, Shield, X, ArrowRight, Lock } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { VaultMode, AppTab, VaultItem, VaultSettings, MemoryStatus, CryptoLog } from './types';
+import { INITIAL_REAL_ITEMS, INITIAL_FAKE_ITEMS, DEFAULT_SETTINGS } from './data/initialVaultData';
+import { simulateKeyDerivation, performEmergencyRamWipe } from './utils/cryptoSim';
+import { AppLockScreen } from './components/AppLockScreen';
+import { VaultHeader } from './components/VaultHeader';
+import { VaultTabBar } from './components/VaultTabBar';
+import { VaultItemsView } from './components/VaultItemsView';
+import { PasswordGeneratorView } from './components/PasswordGeneratorView';
+import { StorageEngineView } from './components/StorageEngineView';
+import { SettingsView } from './components/SettingsView';
+import { EmergencyCountdownModal } from './components/EmergencyCountdownModal';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<TabType>('module1-delivery');
-  const [module0Status, setModule0Status] = useState<'in-review' | 'completed'>('completed');
-  const [module1Status, setModule1Status] = useState<'in-review' | 'completed'>('in-review');
-  const [showApprovalModal, setShowApprovalModal] = useState<boolean>(false);
-  const [showModule1Modal, setShowModule1Modal] = useState<boolean>(false);
+  const [mode, setMode] = useState<VaultMode>('locked');
+  const [activeTab, setActiveTab] = useState<AppTab>('vault');
+  const [settings, setSettings] = useState<VaultSettings>(() => {
+    try {
+      const saved = localStorage.getItem('vault_settings_v1');
+      return saved ? JSON.parse(saved) : DEFAULT_SETTINGS;
+    } catch {
+      return DEFAULT_SETTINGS;
+    }
+  });
 
-  const handleApproveModule0 = () => {
-    setModule0Status('completed');
-    setShowApprovalModal(true);
+  const [realItems, setRealItems] = useState<VaultItem[]>(() => {
+    try {
+      const saved = localStorage.getItem('vault_real_items_v1');
+      return saved ? JSON.parse(saved) : INITIAL_REAL_ITEMS;
+    } catch {
+      return INITIAL_REAL_ITEMS;
+    }
+  });
+
+  const [fakeItems, setFakeItems] = useState<VaultItem[]>(() => {
+    try {
+      const saved = localStorage.getItem('vault_fake_items_v1');
+      return saved ? JSON.parse(saved) : INITIAL_FAKE_ITEMS;
+    } catch {
+      return INITIAL_FAKE_ITEMS;
+    }
+  });
+
+  const [memoryStatus, setMemoryStatus] = useState<MemoryStatus>({
+    realKeyInMemory: false,
+    fakeKeyInMemory: false,
+    activeContainer: 'none',
+    memoryWipeStatus: 'intact',
+    lastAction: 'Cold Boot / Locked'
+  });
+
+  const [cryptoLogs, setCryptoLogs] = useState<CryptoLog[]>([
+    {
+      id: 'log-1',
+      timestamp: new Date().toLocaleTimeString(),
+      level: 'info',
+      message: 'iOS App Sandbox initialized. Secure Enclave hardware entropy active.'
+    },
+    {
+      id: 'log-2',
+      timestamp: new Date().toLocaleTimeString(),
+      level: 'info',
+      message: 'Encrypted SQLite containers (real.sqlite.enc & fake.sqlite.enc) mounted in standby.'
+    }
+  ]);
+
+  const [showEmergencyModal, setShowEmergencyModal] = useState<boolean>(false);
+
+  // Save changes to localStorage simulation
+  useEffect(() => {
+    localStorage.setItem('vault_settings_v1', JSON.stringify(settings));
+  }, [settings]);
+
+  useEffect(() => {
+    localStorage.setItem('vault_real_items_v1', JSON.stringify(realItems));
+  }, [realItems]);
+
+  useEffect(() => {
+    localStorage.setItem('vault_fake_items_v1', JSON.stringify(fakeItems));
+  }, [fakeItems]);
+
+  const addLog = (level: CryptoLog['level'], message: string) => {
+    const newLog: CryptoLog = {
+      id: `log-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      timestamp: new Date().toLocaleTimeString(),
+      level,
+      message
+    };
+    setCryptoLogs((prev) => [newLog, ...prev.slice(0, 30)]);
   };
 
-  const handleApproveModule1 = () => {
-    setModule1Status('completed');
-    setShowModule1Modal(true);
+  // Unlock Real Workspace
+  const handleUnlockReal = async () => {
+    addLog('info', 'Verifying Real PIN via Secure Enclave PBKDF2...');
+    await simulateKeyDerivation(settings.realPin, 'real');
+    
+    setMode('real');
+    setActiveTab('vault');
+    setMemoryStatus({
+      realKeyInMemory: true,
+      fakeKeyInMemory: false,
+      activeContainer: 'real.sqlite.enc',
+      memoryWipeStatus: 'intact',
+      lastAction: 'Unlocked Real Workspace ($K_{real}$ loaded into volatile RAM)'
+    });
+    addLog('success', 'PBKDF2 derivation complete. $K_{real}$ (256-bit AES-GCM) loaded into RAM.');
+    addLog('success', 'Mounted real.sqlite.enc container.');
   };
+
+  // Unlock Fake Workspace (via Duress PIN or Emergency Handover)
+  const handleUnlockFake = async (isDuress: boolean) => {
+    if (isDuress) {
+      addLog('threat', 'DURESS PIN OR PANIC TRIGGER DETECTED! Initiating emergency handover sequence...');
+    } else {
+      addLog('info', 'Unlocking secondary organizer workspace mode...');
+    }
+
+    const wipeResult = performEmergencyRamWipe();
+    await simulateKeyDerivation(settings.duressPin, 'fake');
+
+    setMode('fake');
+    setActiveTab('vault');
+    setShowEmergencyModal(false);
+    setMemoryStatus({
+      realKeyInMemory: false,
+      fakeKeyInMemory: true,
+      activeContainer: 'fake.sqlite.enc',
+      memoryWipeStatus: 'wiped',
+      lastAction: 'Emergency Handover executed ($K_{real}$ zeroed via memset_s)',
+      lastWipedAt: wipeResult.timestamp
+    });
+
+    if (isDuress) {
+      addLog('threat', `Volatile RAM wiped! memset_s(K_real, 0) executed at ${wipeResult.timestamp}.`);
+      addLog('info', 'Mounted decoy container: fake.sqlite.enc. Zero trace of primary vault exists.');
+    } else {
+      addLog('success', 'Mounted decoy container: fake.sqlite.enc.');
+    }
+  };
+
+  // Lock App
+  const handleLock = () => {
+    const wipeResult = performEmergencyRamWipe();
+    setMode('locked');
+    setShowEmergencyModal(false);
+    setMemoryStatus({
+      realKeyInMemory: false,
+      fakeKeyInMemory: false,
+      activeContainer: 'none',
+      memoryWipeStatus: 'wiped',
+      lastAction: 'Vault locked manually ($K_{real}$ & $K_{fake}$ zeroed from RAM)',
+      lastWipedAt: wipeResult.timestamp
+    });
+    addLog('info', 'App locked. All cryptographic memory buffers zeroed out.');
+  };
+
+  // Emergency Panic Button or Swipe Handler
+  const handleTriggerEmergency = () => {
+    if (settings.emergencyMode === 'instant') {
+      handleUnlockFake(true);
+    } else {
+      setShowEmergencyModal(true);
+    }
+  };
+
+  // Force RAM zeroing button in storage view
+  const handleForceWipeRam = () => {
+    const wipeResult = performEmergencyRamWipe();
+    setMemoryStatus((prev) => ({
+      ...prev,
+      realKeyInMemory: false,
+      memoryWipeStatus: 'wiped',
+      lastAction: 'Manual RAM zeroize executed via memset_s',
+      lastWipedAt: wipeResult.timestamp
+    }));
+    addLog('threat', `Manual volatile RAM wipe executed at ${wipeResult.timestamp}.`);
+  };
+
+  // Self-Destruct / Wipe All Data
+  const handleSelfDestruct = () => {
+    localStorage.removeItem('vault_settings_v1');
+    localStorage.removeItem('vault_real_items_v1');
+    localStorage.removeItem('vault_fake_items_v1');
+    setRealItems([]);
+    setFakeItems([]);
+    setSettings(DEFAULT_SETTINGS);
+    handleLock();
+    addLog('threat', 'SELF-DESTRUCT EXECUTED: All containers and memory keys permanently wiped!');
+    alert("Vault destroyed. All local containers have been zeroized.");
+  };
+
+  // Item CRUD handlers
+  const currentItems = mode === 'real' ? realItems : fakeItems;
+  const setCurrentItems = mode === 'real' ? setRealItems : setFakeItems;
+
+  const handleAddItem = (newItem: Omit<VaultItem, 'id' | 'updatedAt'>) => {
+    const item: VaultItem = {
+      ...newItem,
+      id: `${mode === 'real' ? 'r' : 'f'}-${Date.now()}`,
+      updatedAt: 'Just now'
+    };
+    setCurrentItems([item, ...currentItems]);
+    addLog('info', `Added new item "${item.title}" to ${mode === 'real' ? 'real.sqlite.enc' : 'fake.sqlite.enc'}.`);
+  };
+
+  const handleUpdateItem = (updatedItem: VaultItem) => {
+    setCurrentItems(
+      currentItems.map((it) => (it.id === updatedItem.id ? { ...updatedItem, updatedAt: 'Just now' } : it))
+    );
+    addLog('info', `Updated item "${updatedItem.title}" in container.`);
+  };
+
+  const handleDeleteItem = (id: string) => {
+    const target = currentItems.find((it) => it.id === id);
+    setCurrentItems(currentItems.filter((it) => it.id !== id));
+    if (target) {
+      addLog('warn', `Deleted item "${target.title}" from storage container.`);
+    }
+  };
+
+  // Render Lock Screen if locked
+  if (mode === 'locked') {
+    return (
+      <AppLockScreen
+        settings={settings}
+        onUnlockReal={handleUnlockReal}
+        onUnlockFake={handleUnlockFake}
+      />
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-emerald-500 selection:text-slate-950">
-      {/* Navigation Header */}
-      <Navbar
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        module0Status={module0Status}
-        onApproveModule0={handleApproveModule0}
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-emerald-500 selection:text-slate-950 pb-20">
+      {/* Top Header */}
+      <VaultHeader
+        mode={mode}
+        settings={settings}
+        memoryStatus={memoryStatus}
+        onLock={handleLock}
+        onTriggerEmergency={handleTriggerEmergency}
       />
 
-      {/* Main Content Area */}
-      <main className="flex-1 pb-16">
-        {activeTab === 'module1-delivery' && (
-          <Module1DeliveryView
-            onApproveModule1={handleApproveModule1}
-            isApproved={module1Status === 'completed'}
+      {/* Main Content Workspace */}
+      <main className="flex-1">
+        {activeTab === 'vault' && (
+          <VaultItemsView
+            items={currentItems}
+            mode={mode}
+            onAddItem={handleAddItem}
+            onUpdateItem={handleUpdateItem}
+            onDeleteItem={handleDeleteItem}
           />
         )}
-        {activeTab === 'architecture' && <ArchitectureSpecView />}
-        {activeTab === 'threat-model' && <ThreatModelView />}
-        {activeTab === 'simulator' && <TriggerSimulatorView />}
-        {activeTab === 'roadmap' && (
-          <ModuleRoadmapView
-            module0Status={module0Status}
-            onApproveModule0={handleApproveModule0}
-            module1Status={module1Status}
+
+        {activeTab === 'generator' && (
+          <PasswordGeneratorView
+            onSaveToVault={mode === 'real' ? (item) => handleAddItem({ ...item, isSensitive: true }) : undefined}
+          />
+        )}
+
+        {activeTab === 'storage' && (
+          <StorageEngineView
+            mode={mode}
+            memoryStatus={memoryStatus}
+            logs={cryptoLogs}
+            onForceWipeRam={handleForceWipeRam}
+          />
+        )}
+
+        {activeTab === 'settings' && (
+          <SettingsView
+            mode={mode}
+            settings={settings}
+            onUpdateSettings={(newSet) => {
+              setSettings(newSet);
+              addLog('info', 'Updated Vault security policies and PIN configuration.');
+            }}
+            onSelfDestruct={handleSelfDestruct}
+            onLockNow={handleLock}
           />
         )}
       </main>
 
-      {/* Approval Acknowledgement Modal */}
-      {showApprovalModal && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-slate-900 border border-emerald-500/60 rounded-2xl p-6 sm:p-8 max-w-lg w-full shadow-2xl relative text-left space-y-4">
-            <button
-              onClick={() => setShowApprovalModal(false)}
-              className="absolute top-4 right-4 text-slate-400 hover:text-white p-1 rounded-lg bg-slate-800"
-            >
-              <X className="h-5 w-5" />
-            </button>
-
-            <div className="flex items-center space-x-3 text-emerald-400">
-              <div className="p-2.5 bg-emerald-950 rounded-xl border border-emerald-800">
-                <CheckCircle2 className="h-8 w-8" />
-              </div>
-              <div>
-                <span className="text-xs font-mono uppercase tracking-wider block text-emerald-300">GOVERNANCE CHECKPOINT</span>
-                <h3 className="text-xl font-bold text-white">Module 0 Approved!</h3>
-              </div>
-            </div>
-
-            <p className="text-slate-300 text-sm leading-relaxed">
-              As your Senior iOS Engineer and Security Architect, I acknowledge your approval of the <strong className="text-white">Module 0 Architecture & Security Blueprint</strong>.
-            </p>
-
-            <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2 text-xs font-mono text-slate-300">
-              <div className="flex items-center justify-between text-emerald-400 font-bold">
-                <span>NEXT STEP IN ROADMAP:</span>
-                <span>MODULE 1</span>
-              </div>
-              <p className="text-slate-400">
-                &bull; Module 1: Cryptographic Core & Key Management
-                <br />&bull; PBKDF2 / Argon2id + Secure Enclave Entropy
-                <br />&bull; Swift volatile memory zeroing (<code className="text-sky-300">memset_s</code>)
-              </p>
-            </div>
-
-            <p className="text-xs text-amber-300 bg-amber-950/40 p-3 rounded-lg border border-amber-900/50">
-              Per your directive: <em className="text-amber-200">"Stop after each completed module and wait for my approval before continuing."</em> We have paused development at Module 0. When you are ready, instruct me in the chat to begin implementing Module 1.
-            </p>
-
-            <div className="flex justify-end pt-2">
-              <button
-                onClick={() => {
-                  setShowApprovalModal(false);
-                  setActiveTab('roadmap');
-                }}
-                className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm px-5 py-2.5 rounded-xl transition-all shadow-lg shadow-emerald-600/20 flex items-center space-x-2"
-              >
-                <span>View Roadmap Status</span>
-                <ArrowRight className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
-        </div>
+      {/* 10-Second Emergency Handover Modal */}
+      {showEmergencyModal && (
+        <EmergencyCountdownModal
+          onExecuteHandover={() => handleUnlockFake(true)}
+          onCancel={() => {
+            setShowEmergencyModal(false);
+            addLog('info', 'Emergency countdown cancelled by user (false alarm).');
+          }}
+        />
       )}
 
-      {/* Module 1 Approval Acknowledgement Modal */}
-      {showModule1Modal && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-slate-900 border border-emerald-500/60 rounded-2xl p-6 sm:p-8 max-w-lg w-full shadow-2xl relative text-left space-y-4">
-            <button
-              onClick={() => setShowModule1Modal(false)}
-              className="absolute top-4 right-4 text-slate-400 hover:text-white p-1 rounded-lg bg-slate-800"
-            >
-              <X className="h-5 w-5" />
-            </button>
-
-            <div className="flex items-center space-x-3 text-emerald-400">
-              <div className="p-2.5 bg-emerald-950 rounded-xl border border-emerald-800">
-                <CheckCircle2 className="h-8 w-8" />
-              </div>
-              <div>
-                <span className="text-xs font-mono uppercase tracking-wider block text-emerald-300">GOVERNANCE CHECKPOINT</span>
-                <h3 className="text-xl font-bold text-white">Module 1 Officially Approved!</h3>
-              </div>
-            </div>
-
-            <p className="text-slate-300 text-sm leading-relaxed">
-              As your Senior iOS Engineer and Security Architect, I acknowledge your approval of <strong className="text-white">Module 1: Cryptographic Core & Key Management</strong>.
-            </p>
-
-            <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2 text-xs font-mono text-slate-300">
-              <div className="flex items-center justify-between text-emerald-400 font-bold">
-                <span>NEXT STEP IN ROADMAP:</span>
-                <span>MODULE 2 UNLOCKED</span>
-              </div>
-              <p className="text-slate-400">
-                &bull; Module 2: Storage Engine & SQLite SQLCipher
-                <br />&bull; Hardware-bound encrypted database files
-                <br />&bull; Physical isolation of Real vs Fake schema containers
-              </p>
-            </div>
-
-            <p className="text-xs text-amber-300 bg-amber-950/40 p-3 rounded-lg border border-amber-900/50">
-              Per your directive: <em className="text-amber-200">"Stop after each completed module and wait for my approval before continuing."</em> We have paused development at Module 1. When you are ready, instruct me in the chat to begin implementing Module 2.
-            </p>
-
-            <div className="flex justify-end pt-2">
-              <button
-                onClick={() => {
-                  setShowModule1Modal(false);
-                  setActiveTab('roadmap');
-                }}
-                className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm px-5 py-2.5 rounded-xl transition-all shadow-lg shadow-emerald-600/20 flex items-center space-x-2"
-              >
-                <span>View Roadmap Status</span>
-                <ArrowRight className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Footer */}
-      <footer className="bg-slate-950 border-t border-slate-900 text-slate-500 py-6 text-center text-xs font-mono">
-        <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-          <span>VAULT &bull; iOS Security & Dual-Workspace Architecture Spec v1.0</span>
-          <span>Strict Local & Offline-First &bull; Zero Knowledge Separation</span>
-        </div>
-      </footer>
+      {/* Bottom Navigation Tab Bar */}
+      <VaultTabBar
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        mode={mode}
+      />
     </div>
   );
 }
