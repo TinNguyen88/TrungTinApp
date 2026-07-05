@@ -40,6 +40,17 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* Navigation Tabs */}
           <nav className="hidden md:flex items-center space-x-1 bg-slate-950/60 p-1 rounded-xl border border-slate-800/80">
             <button
+              onClick={() => setActiveTab('module1-delivery')}
+              className={`flex items-center space-x-2 px-3.5 py-1.5 rounded-lg text-sm font-semibold transition-all ${
+                activeTab === 'module1-delivery'
+                  ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md shadow-emerald-900/30 border border-emerald-400/40'
+                  : 'text-emerald-400 hover:text-emerald-300 hover:bg-slate-800/60 border border-emerald-500/20'
+              }`}
+            >
+              <Lock className="h-4 w-4 text-emerald-300" />
+              <span>Module 1: Code &amp; Tests</span>
+            </button>
+            <button
               onClick={() => setActiveTab('architecture')}
               className={`flex items-center space-x-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
                 activeTab === 'architecture'
@@ -112,6 +123,13 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         {/* Mobile Navigation bar */}
         <div className="flex md:hidden items-center justify-around py-2 border-t border-slate-800/80 text-xs overflow-x-auto">
+          <button
+            onClick={() => setActiveTab('module1-delivery')}
+            className={`flex items-center space-x-1 px-2.5 py-1 rounded font-semibold ${activeTab === 'module1-delivery' ? 'bg-emerald-600 text-white' : 'text-emerald-400'}`}
+          >
+            <Lock className="h-3.5 w-3.5" />
+            <span>Mod 1</span>
+          </button>
           <button
             onClick={() => setActiveTab('architecture')}
             className={`flex items-center space-x-1 px-2 py-1 rounded ${activeTab === 'architecture' ? 'bg-slate-800 text-emerald-400' : 'text-slate-400'}`}

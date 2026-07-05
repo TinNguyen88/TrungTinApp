@@ -1,4 +1,13 @@
-export type TabType = 'architecture' | 'threat-model' | 'simulator' | 'roadmap';
+export type TabType = 'architecture' | 'threat-model' | 'simulator' | 'roadmap' | 'module1-delivery';
+
+export interface SwiftSourceFile {
+  path: string;
+  filename: string;
+  category: 'App' | 'Security' | 'Models' | 'Tests' | 'Manifest';
+  linesOfCode: number;
+  description: string;
+  code: string;
+}
 
 export interface ArchitecturalPillar {
   id: string;

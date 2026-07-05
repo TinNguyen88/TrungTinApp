@@ -5,11 +5,13 @@ import { MODULE_ROADMAP } from '../data/architectureSpec';
 interface ModuleRoadmapViewProps {
   module0Status: 'in-review' | 'completed';
   onApproveModule0: () => void;
+  module1Status?: 'in-review' | 'completed';
 }
 
 export const ModuleRoadmapView: React.FC<ModuleRoadmapViewProps> = ({
   module0Status,
-  onApproveModule0
+  onApproveModule0,
+  module1Status = 'in-review'
 }) => {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
@@ -75,9 +77,9 @@ export const ModuleRoadmapView: React.FC<ModuleRoadmapViewProps> = ({
 
         <div className="space-y-4">
           {MODULE_ROADMAP.map((step) => {
-            const isCurrent = step.id === 0 && module0Status === 'in-review';
-            const isApproved = step.id === 0 && module0Status === 'completed';
-            const isLocked = step.id > 0;
+            const isApproved = (step.id === 0 && module0Status === 'completed') || (step.id === 1 && module1Status === 'completed');
+            const isCurrent = (step.id === 0 && module0Status === 'in-review') || (step.id === 1 && module0Status === 'completed' && module1Status === 'in-review') || (step.id === 2 && module1Status === 'completed');
+            const isLocked = !isApproved && !isCurrent;
 
             return (
               <div
