@@ -1,45 +1,28 @@
 export type VaultMode = 'locked' | 'real' | 'fake';
 
-export type VaultItemCategory = 'credential' | 'note' | 'contact' | 'document';
+export type VaultItemCategory = 'note' | 'photo' | 'file' | 'shopping' | 'task';
 
 export interface VaultItem {
   id: string;
   title: string;
   category: VaultItemCategory;
-  preview?: string;
-  content: string;
-  username?: string;
-  password?: string;
-  url?: string;
+  content: string; // Nội dung ghi chú hoặc mô tả
+  imageData?: string; // Base64 cho Hình ảnh
+  fileName?: string; // Tên tệp cho Tập tin
+  fileData?: string; // Base64 cho Tập tin
+  fileSize?: string; // Kích thước tệp (ví dụ: "2.4 MB")
   updatedAt: string;
-  isSensitive: boolean;
+  isCompleted?: boolean; // Cho Danh sách mua sắm hoặc Công việc
+  isSensitive?: boolean;
   favorite?: boolean;
 }
 
 export interface VaultSettings {
-  realPin: string;
-  duressPin: string;
-  enableFaceId: boolean;
-  emergencyMode: 'countdown-10s' | 'instant';
-  autoLockTimeoutMinutes: number;
-  enablePanicSwipe: boolean;
-  stealthTitle: string; // The app name displayed when in Fake Mode
+  realPin: string; // Mật khẩu Không gian Thật
+  duressPin: string; // Mật khẩu Không gian Giả (Khẩn cấp)
+  enableFaceId: boolean; // Bật/tắt Face ID
+  autoLockMinutes: number; // Thời gian tự động khóa
+  stealthTitle: string; // Tên ứng dụng hiển thị khi ở Không gian Giả
 }
 
-export interface MemoryStatus {
-  realKeyInMemory: boolean;
-  fakeKeyInMemory: boolean;
-  activeContainer: 'none' | 'real.sqlite.enc' | 'fake.sqlite.enc';
-  memoryWipeStatus: 'intact' | 'zeroing' | 'wiped';
-  lastAction: string;
-  lastWipedAt?: string;
-}
-
-export interface CryptoLog {
-  id: string;
-  timestamp: string;
-  level: 'info' | 'warn' | 'threat' | 'success';
-  message: string;
-}
-
-export type AppTab = 'vault' | 'generator' | 'storage' | 'settings';
+export type AppTab = 'vault' | 'settings';
