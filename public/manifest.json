@@ -1,0 +1,19 @@
+{
+  "short_name": "S.O.S",
+  "name": "S.O.S - Bảo Vệ Dữ Liệu Offline",
+  "description": "Kho lưu trữ dữ liệu cá nhân mã hóa AES-256-GCM hoạt động 100% Offline không cần mạng",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#020617",
+  "theme_color": "#020617",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "type": "image/svg+xml",
+      "sizes": "192x192 512x512",
+      "purpose": "any maskable"
+    }
+  ]
+}

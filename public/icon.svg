@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <rect width="512" height="512" rx="128" fill="url(#grad)" />
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#10b981" />
+      <stop offset="100%" stop-color="#0f766e" />
+    </linearGradient>
+  </defs>
+  <path d="M256 96L128 153.6V256C128 358.4 182.4 443.2 256 473.6C329.6 443.2 384 358.4 384 256V153.6L256 96Z" fill="#022c22" fill-opacity="0.3" stroke="#047857" stroke-width="16" stroke-linejoin="round"/>
+  <path d="M256 120L148 168V256C148 344 194 420 256 448C318 420 364 344 364 256V168L256 120Z" fill="url(#grad2)" stroke="#34d399" stroke-width="12" stroke-linejoin="round"/>
+  <defs>
+    <linearGradient id="grad2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#059669" />
+      <stop offset="100%" stop-color="#0284c7" />
+    </linearGradient>
+  </defs>
+  <circle cx="256" cy="256" r="38" fill="#ecfdf5" stroke="#065f46" stroke-width="8"/>
+  <path d="M256 294V352" stroke="#ecfdf5" stroke-width="20" stroke-linecap="round"/>
+  <circle cx="256" cy="352" r="10" fill="#ecfdf5"/>
+  <text x="256" y="420" font-family="system-ui, -apple-system, sans-serif" font-weight="900" font-size="44" fill="#ffffff" text-anchor="middle" letter-spacing="4">S.O.S</text>
+</svg>

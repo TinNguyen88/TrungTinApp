@@ -12,10 +12,14 @@ import {
   Download, 
   Upload, 
   FileText,
-  AlertCircle
+  AlertCircle,
+  WifiOff,
+  Zap,
+  CheckCircle2
 } from 'lucide-react';
 import { VaultSettings, VaultMode, VaultItem } from '../types';
 import { encryptData, decryptData } from '../utils/security';
+import { syncOfflineCacheWithFeedback } from '../utils/offlineManager';
 
 interface SettingsViewProps {
   mode: VaultMode;
@@ -43,6 +47,21 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [stealthTitle, setStealthTitle] = useState(settings.stealthTitle);
   const [saved, setSaved] = useState(false);
   const [restoreError, setRestoreError] = useState<string | null>(null);
+  const [syncStatus, setSyncStatus] = useState<{ loading: boolean; message: string | null; success: boolean }>({
+    loading: false,
+    message: null,
+    success: false
+  });
+
+  const handleManualSyncOffline = async () => {
+    setSyncStatus({ loading: true, message: 'Đang tải toàn bộ mã nguồn vào bộ nhớ thiết bị...', success: false });
+    const result = await syncOfflineCacheWithFeedback();
+    setSyncStatus({
+      loading: false,
+      message: result.message,
+      success: result.success
+    });
+  };
 
   const isFake = mode === 'fake';
 
@@ -299,6 +318,60 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 <option value={0}>Khóa ngay khi thoát app</option>
               </select>
             </div>
+          </div>
+        </div>
+
+        {/* Quản lý PWA Offline & Màn hình chính iOS */}
+        <div className="bg-slate-900 border border-emerald-500/30 rounded-3xl p-5 space-y-4 shadow-lg shadow-emerald-500/5 relative overflow-hidden">
+          <div className="flex items-center space-x-2 pb-3 border-b border-slate-800 text-emerald-400">
+            <WifiOff className="h-5 w-5" />
+            <h3 className="font-bold text-sm text-white">Chế độ 100% Offline (Màn hình chính iOS)</h3>
+          </div>
+
+          <div className="space-y-2.5 text-xs text-slate-300 leading-relaxed">
+            <p className="flex items-start space-x-2">
+              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+              <span>
+                <strong className="text-white">Đã khắc phục lỗi "cần có mạng":</strong> Ứng dụng hiện đã được cấu hình <strong>Service Worker &amp; Offline Storage</strong>. Toàn bộ HTML, JS, CSS và hình ảnh được tải thẳng vào bộ nhớ thiết bị.
+              </span>
+            </p>
+
+            <div className="bg-slate-950 p-3.5 rounded-2xl border border-slate-800 space-y-2 font-sans">
+              <span className="text-xs font-bold text-emerald-400 block flex items-center space-x-1.5">
+                <Smartphone className="w-4 h-4" />
+                <span>Hướng dẫn cài đặt chạy 100% không cần Wi-Fi/4G:</span>
+              </span>
+              <ol className="list-decimal list-inside space-y-1.5 text-slate-400 text-[11px]">
+                <li>Mở trang web bằng trình duyệt <strong>Safari</strong> trên iPhone/iPad (khi đang có mạng).</li>
+                <li>Bấm nút <strong className="text-emerald-300">"⚡ Đồng bộ Cache Offline ngay"</strong> bên dưới.</li>
+                <li>Nhấn nút <strong>Chia sẻ (Share ⬆️)</strong> ở cạnh dưới màn hình Safari.</li>
+                <li>Chọn <strong>"Thêm vào Màn hình chính" (Add to Home Screen ➕)</strong>.</li>
+                <li>Tắt hoàn toàn Wi-Fi và 4G/5G, sau đó mở ứng dụng S.O.S từ màn hình chính để kiểm tra!</li>
+              </ol>
+            </div>
+          </div>
+
+          <div className="pt-2">
+            <button
+              type="button"
+              onClick={handleManualSyncOffline}
+              disabled={syncStatus.loading}
+              className="w-full flex items-center justify-center space-x-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold py-3 px-4 rounded-2xl transition-all active:scale-95 shadow-md shadow-emerald-600/20 disabled:opacity-50"
+            >
+              <Zap className={`w-4 h-4 ${syncStatus.loading ? 'animate-spin' : ''}`} />
+              <span>{syncStatus.loading ? 'Đang tải mã nguồn...' : '⚡ Đồng bộ Cache Offline ngay'}</span>
+            </button>
+
+            {syncStatus.message && (
+              <div className={`mt-3 p-3 rounded-xl text-xs font-medium border leading-relaxed flex items-start space-x-2 ${
+                syncStatus.success 
+                  ? 'bg-emerald-950/80 text-emerald-300 border-emerald-500/40' 
+                  : 'bg-rose-950/80 text-rose-300 border-rose-500/40'
+              }`}>
+                <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5 text-emerald-400" />
+                <span>{syncStatus.message}</span>
+              </div>
+            )}
           </div>
         </div>
 

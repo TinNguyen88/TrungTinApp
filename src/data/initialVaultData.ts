@@ -15,7 +15,7 @@ export const INITIAL_REAL_ITEMS: VaultItem[] = [
     title: 'Ảnh chụp CCCD & Hộ chiếu',
     category: 'photo',
     content: 'Lưu trữ bản ảnh chụp chất lượng cao CCCD gắp chip và Hộ chiếu để xuất trình khi khẩn cấp ở nước ngoài.',
-    imageData: 'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&q=80&w=600',
+    imageData: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="600" height="380" viewBox="0 0 600 380" fill="none"><rect width="600" height="380" rx="24" fill="%230f172a" stroke="%2310b981" stroke-width="4"/><rect x="40" y="80" width="140" height="180" rx="12" fill="%231e293b" stroke="%23334155" stroke-width="2"/><circle cx="110" cy="150" r="40" fill="%23334155"/><path d="M60 240c0-28 22-50 50-50s50 22 50 50v10H60v-10z" fill="%23475569"/><text x="220" y="110" font-family="sans-serif" font-weight="bold" font-size="24" fill="%2310b981">CĂN CƯỚC CÔNG DÂN GẮN CHIP</text><text x="220" y="150" font-family="monospace" font-size="18" fill="%2394a3b8">Số: 079099888888</text><text x="220" y="190" font-family="sans-serif" font-size="16" fill="%23cbd5e1">Họ và tên: NGUYỄN VĂN AN</text><text x="220" y="225" font-family="sans-serif" font-size="16" fill="%23cbd5e1">Ngày sinh: 15/08/1990</text><text x="220" y="260" font-family="sans-serif" font-size="16" fill="%23cbd5e1">Quốc tịch: Việt Nam</text><rect x="480" y="270" width="70" height="60" rx="8" fill="%23e2e8f0"/><path d="M495 285h40v30h-40z" fill="%23d97706"/></svg>',
     updatedAt: '12/05/2026',
     isSensitive: true,
     favorite: true
